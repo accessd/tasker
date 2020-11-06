@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6370"
+
+  queue:
+    image: tasker/tasker
+    restart: always
+    volumes:
+      - ./:/app
+    working_dir: /app
+    environment:
+      - REDIS_HOST=redis
+    command: bundle exec ruby processor.rb
+
+  api:
+    image: tasker/tasker
+    restart: always
+    volumes:
+      - ./:/app
+    ports:
+      - "3000:3000"
+    working_dir: /app
+    environment:
+      - REDIS_HOST=redis
+    command: bundle exec ruby api.rb

@@ -4,7 +4,7 @@
 
 Async tasks processor. Tasks: Task1, Task2, Task3, Task4, Task5
 
-![](https://www.dropbox.com/s/8cbgonvmse6atri/out.gif?dl=0)
+![](demo.gif)
 
 ## USAGE
 

@@ -9,13 +9,14 @@ class Queue
 
   attr_reader :redis
 
-  SERIAL_TASK_MATCH = /serial":true/
-  LOCK_SERIAL_KEY = 'lock:serial'
+  SERIAL_TASK_MATCH = /serial":true/.freeze
+  LOCK_SERIAL_KEY = 'lock:serial'.freeze
   LOCK_TIMEOUT = 10
-  TASK_EXECUTION_TIME_KEY = 'task_execution_time'
+  TASK_EXECUTION_TIME_KEY = 'task_execution_time'.freeze
+  TRAPPED_SIGNALS = %w(INT TERM).freeze
 
   def initialize(redis_host: 'redis')
-    @redis = Redis.new(host: redis_host)
+    @redis = Redis.new(host: redis_host, inherit_socket: true)
     @queue_name = 'tasks'
     @process_queue = "#{@queue_name}-processing"
   end
@@ -58,8 +59,10 @@ class Queue
 
   def process
     loop do
+      handle_signals
       lock_serial_processing do
         task = redis.rpoplpush(@queue_name, @process_queue)
+        puts task
         next if task.nil? || task.empty?
 
         puts "#{'-' * 30} [#{Time.now.iso8601(6)}] #{'-' * 30}"
@@ -73,6 +76,14 @@ class Queue
 
   private
 
+  def handle_signals
+    TRAPPED_SIGNALS.each do |signal|
+      Signal.trap(signal) do
+        exit
+      end
+    end
+  end
+
   def execute_task(task)
     current_time = Time.now.to_i
     parsed_task = JSON.parse(task)
@@ -81,10 +92,10 @@ class Queue
     worker = worker_class.new
     worker.job_id = parsed_task['job_id']
     worker.execute
-    save_elapsed_time(current_time, parsed_task['worker'])
+    save_execution_time(current_time, parsed_task['worker'])
   end
 
-  def save_elapsed_time(current_time, worker_name)
+  def save_execution_time(current_time, worker_name)
     elapsed = Time.now.to_i - current_time
     redis.hset(TASK_EXECUTION_TIME_KEY, worker_name, elapsed)
   end

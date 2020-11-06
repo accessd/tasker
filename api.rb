@@ -35,3 +35,32 @@ get '/tasks' do
   queue = Queue.new(redis_host: ENV['REDIS_HOST'])
   json queue.workers_eta
 end
+
+######################################################
+
+template :index do
+<<EOF
+<style>
+.ascii-art {
+    font-family: monospace;
+    white-space: pre;
+    width:100%;
+    height:100%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+</style>
+<div class="ascii-art">
+ @@@@@@@  @@@@@@   @@@@@@ @@@  @@@ @@@@@@@@ @@@@@@@
+   @@!   @@!  @@@ !@@     @@!  !@@ @@!      @@!  @@@
+   @!!   @!@!@!@!  !@@!!  @!@@!@!  @!!!:!   @!@!!@!
+   !!:   !!:  !!!     !:! !!: :!!  !!:      !!: :!!
+    :     :   : : ::.: :   :   ::: : :: :::  :   : :
+</div>
+EOF
+end
+
+get '/' do
+  erb :index
+end

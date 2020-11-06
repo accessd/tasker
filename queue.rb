@@ -14,11 +14,33 @@ class Queue
   LOCK_TIMEOUT = 10
   TASK_EXECUTION_TIME_KEY = 'task_execution_time'.freeze
   TRAPPED_SIGNALS = %w(INT TERM).freeze
+  RETRY_TIMEOUT = 60
 
   def initialize(redis_host: 'redis')
     @redis = Redis.new(host: redis_host, inherit_socket: true)
     @queue_name = 'tasks'
     @process_queue = "#{@queue_name}-processing"
+  end
+
+  def retry_tasks
+    tasks = fetch_processing
+    current_time = Time.now.to_i
+
+    tasks.each do |task|
+      next if task.nil?
+
+      if task.empty?
+        redis.lrem(@process_queue, 0, task)
+        next
+      end
+
+      parsed_task = JSON.parse(task)
+      if parsed_task['timestamp'].to_i + RETRY_TIMEOUT < current_time
+        puts "retry task: #{task}"
+        redis.lrem(@process_queue, 0, task)
+        push(task)
+      end
+    end
   end
 
   def clear_all
